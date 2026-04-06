@@ -1,0 +1,27 @@
+# Xcode
+*.xcuserstate
+*.xcuserdatad
+xcuserdata/
+DerivedData/
+*.pbxuser
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+
+# Build
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods / SPM
+Pods/
+.build/
+
+# macOS
+.DS_Store
+
+# SwiftData / SQLite (local dev databases, not source)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
