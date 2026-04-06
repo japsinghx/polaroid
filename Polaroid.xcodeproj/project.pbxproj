@@ -21,6 +21,8 @@
 		AA000015 /* PhotoStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000015 /* PhotoStorageManager.swift */; };
 		AA000016 /* PolaroidFrameRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000016 /* PolaroidFrameRenderer.swift */; };
 		AA000019 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000020 /* LocationManager.swift */; };
+		AA000021 /* StyleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000021 /* StyleSettings.swift */; };
+		AA000022 /* CameraChipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000022 /* CameraChipsView.swift */; };
 		AA000017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000017 /* Assets.xcassets */; };
 		AA000018 /* PermanentMarker-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AB000019 /* PermanentMarker-Regular.ttf */; };
 /* End PBXBuildFile section */
@@ -40,6 +42,8 @@
 		AB000015 /* PhotoStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoStorageManager.swift; sourceTree = "<group>"; };
 		AB000016 /* PolaroidFrameRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolaroidFrameRenderer.swift; sourceTree = "<group>"; };
 		AB000020 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		AB000021 /* StyleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleSettings.swift; sourceTree = "<group>"; };
+		AB000022 /* CameraChipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChipsView.swift; sourceTree = "<group>"; };
 		AB000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AB000019 /* PermanentMarker-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PermanentMarker-Regular.ttf"; path = "Polaroid/Resources/Fonts/PermanentMarker-Regular.ttf"; sourceTree = SOURCE_ROOT; };
@@ -84,6 +88,7 @@
 			isa = PBXGroup;
 			children = (
 				AB000002 /* PolaroidPhoto.swift */,
+				AB000021 /* StyleSettings.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -101,6 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				AB000005 /* CameraBodyView.swift */,
+				AB000022 /* CameraChipsView.swift */,
 				AB000008 /* PhotoCounterView.swift */,
 				AB000010 /* PolaroidPrintView.swift */,
 				AB000011 /* PrintEjectionOverlay.swift */,
@@ -225,6 +231,8 @@
 			files = (
 				AA000001 /* PolaroidApp.swift in Sources */,
 				AA000002 /* PolaroidPhoto.swift in Sources */,
+				AA000021 /* StyleSettings.swift in Sources */,
+				AA000022 /* CameraChipsView.swift in Sources */,
 				AA000003 /* CameraService.swift in Sources */,
 				AA000004 /* CameraPreviewView.swift in Sources */,
 				AA000005 /* CameraBodyView.swift in Sources */,

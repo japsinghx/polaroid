@@ -1,7 +1,13 @@
 import UIKit
 
 enum PolaroidFrameRenderer {
-    static func render(image: UIImage, date: Date, location: String? = nil) -> UIImage {
+    static func render(
+        image: UIImage,
+        date: Date,
+        leftText: String? = nil,
+        fontStyle: FontStyle = .handwritten,
+        fontColor: FontColor = .dark
+    ) -> UIImage {
         let photoSize: CGFloat = 800
         let borderSide: CGFloat = 60
         let borderBottom: CGFloat = 180
@@ -15,45 +21,42 @@ enum PolaroidFrameRenderer {
         )
 
         return renderer.image { context in
-            // White background
             UIColor.white.setFill()
             context.fill(CGRect(x: 0, y: 0, width: totalWidth, height: totalHeight))
 
-            let photoRect = CGRect(x: borderSide, y: borderTop, width: photoSize, height: photoSize)
-            image.squareCropped().draw(in: photoRect)
+            image.squareCropped().draw(in: CGRect(x: borderSide, y: borderTop, width: photoSize, height: photoSize))
 
-            // Permanent Marker font for the date (matches in-app display)
-            let markerFont = UIFont(name: "PermanentMarker-Regular", size: 52)
-                ?? UIFont.systemFont(ofSize: 52, weight: .bold)
+            let resolvedFont: UIFont
+            switch fontStyle {
+            case .handwritten:
+                resolvedFont = UIFont(name: "PermanentMarker-Regular", size: 52) ?? UIFont.systemFont(ofSize: 52, weight: .bold)
+            case .classic:
+                let descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body).withDesign(.serif)
+                resolvedFont = descriptor.map { UIFont(descriptor: $0, size: 44) } ?? UIFont.systemFont(ofSize: 44, weight: .thin)
+            }
+
+            let textColor = fontColor.uiColor
+            let textY = borderTop + photoSize + 50
+            let textHeight: CGFloat = 80
+
+            if let leftText {
+                let attrs: [NSAttributedString.Key: Any] = [.font: resolvedFont, .foregroundColor: textColor]
+                let rect = CGRect(x: borderSide, y: textY, width: photoSize / 2, height: textHeight)
+                leftText.draw(in: rect, withAttributes: attrs)
+            }
 
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "MM/dd/yyyy"
             let dateString = dateFormatter.string(from: date)
 
-            let textColor = UIColor(white: 0.2, alpha: 0.55)
-
-            // Location on left, date on right — same layout as PolaroidPrintView
-            let textY = borderTop + photoSize + 50
-            let textHeight: CGFloat = 80
-
-            if let location {
-                let locationAttrs: [NSAttributedString.Key: Any] = [
-                    .font: markerFont,
-                    .foregroundColor: textColor,
-                ]
-                let locationRect = CGRect(x: borderSide, y: textY, width: photoSize / 2, height: textHeight)
-                location.draw(in: locationRect, withAttributes: locationAttrs)
-            }
-
-            let dateParagraph = NSMutableParagraphStyle()
-            dateParagraph.alignment = .right
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .right
             let dateAttrs: [NSAttributedString.Key: Any] = [
-                .font: markerFont,
+                .font: resolvedFont,
                 .foregroundColor: textColor,
-                .paragraphStyle: dateParagraph,
+                .paragraphStyle: paragraph,
             ]
-            let dateRect = CGRect(x: borderSide, y: textY, width: photoSize, height: textHeight)
-            dateString.draw(in: dateRect, withAttributes: dateAttrs)
+            dateString.draw(in: CGRect(x: borderSide, y: textY, width: photoSize, height: textHeight), withAttributes: dateAttrs)
         }
     }
 }

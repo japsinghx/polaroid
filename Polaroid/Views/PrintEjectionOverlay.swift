@@ -14,33 +14,32 @@ final class PrintViewModel {
     var lastCompletedImage: UIImage?
     var lastCompletedDate: Date = .now
     var currentLocation: String? = nil
+    var currentFontStyle: FontStyle = .handwritten
+    var currentFontColor: FontColor = .dark
 
-    func eject(image: UIImage, location: String? = nil) {
+    func eject(image: UIImage, location: String? = nil, fontStyle: FontStyle = .handwritten, fontColor: FontColor = .dark) {
         guard !isAnimating else { return }
         isAnimating = true
         currentImage = image
         currentLocation = location
+        currentFontStyle = fontStyle
+        currentFontColor = fontColor
         captureDate = .now
         printRotation = Double.random(in: -4...4)
         printOffset = 700
         developOpacity = 1.0
         showPrint = true
 
-        // Phase 1: Rise from bottom — delayed one frame so the view
-        // is in the hierarchy at offset=700 before we animate
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             guard let self else { return }
             withAnimation(.spring(response: 0.7, dampingFraction: 0.75)) {
                 printOffset = 0
             }
-
-            // Phase 2: Develop (white overlay fades out)
             withAnimation(.easeInOut(duration: 2.5).delay(0.8)) {
                 developOpacity = 0.0
             }
         }
 
-        // Phase 3: Linger, then exit upward
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.5) { [weak self] in
             guard let self else { return }
             lastCompletedImage = currentImage
@@ -61,10 +60,7 @@ struct PrintEjectionOverlay: View {
     @Bindable var viewModel: PrintViewModel
 
     var body: some View {
-        // Always in the hierarchy — controlled by opacity/offset, not if/else
-        // This ensures SwiftUI can animate from the initial state
         ZStack {
-            // Dimming backdrop
             Color.black
                 .ignoresSafeArea()
                 .opacity(viewModel.showPrint ? 0.45 : 0)
@@ -76,7 +72,9 @@ struct PrintEjectionOverlay: View {
                     image: image,
                     date: viewModel.captureDate,
                     developOpacity: viewModel.developOpacity,
-                    location: viewModel.currentLocation
+                    leftText: viewModel.currentLocation,
+                    fontStyle: viewModel.currentFontStyle,
+                    fontColor: viewModel.currentFontColor
                 )
                 .rotationEffect(.degrees(viewModel.printRotation))
                 .offset(y: viewModel.printOffset)

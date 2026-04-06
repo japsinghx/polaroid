@@ -6,11 +6,12 @@ struct CameraBodyView: View {
     @State private var printViewModel = PrintViewModel()
     @State private var soundManager = SoundManager()
     @State private var locationManager = LocationManager()
+    @State private var styleSettings = StyleSettings()
+    @State private var activeChip: ActiveChip? = nil
     @State private var showGallery = false
     @State private var showFlash = false
     @State private var flipRotation: Double = 0
     @State private var lastPhotoImage: UIImage? = nil
-    @AppStorage("remainingShots") private var remainingShots = 8
 
     @Environment(\.modelContext) private var modelContext
 
@@ -28,19 +29,24 @@ struct CameraBodyView: View {
                 ZStack {
                     CameraPreviewView(session: cameraService.session)
                         .opacity(cameraService.isRunning ? 1 : 0)
+                        .onTapGesture {
+                            activeChip = nil
+                        }
 
-                    // Top bar overlay
-                    VStack {
-                        HStack {
+                    // Overlay
+                    VStack(spacing: 0) {
+                        // Top row: chips left, counter right
+                        HStack(alignment: .top) {
+                            CameraChipsView(settings: styleSettings, activeChip: $activeChip)
                             Spacer()
                             PhotoCounterView(count: max(0, 8 - photos.count))
+                                .padding(.top, 10)
+                                .padding(.trailing, 16)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                        .padding(.top, 10)
 
                         Spacer()
 
-                        // Film full banner
                         if filmFull {
                             Text("Film full — save photos and clear to shoot more")
                                 .font(.system(size: 13, weight: .medium))
@@ -109,17 +115,19 @@ struct CameraBodyView: View {
             cameraService.stopSession()
         }
         .sheet(isPresented: $showGallery) {
-            GalleryView()
+            GalleryView(styleSettings: styleSettings)
         }
         .onChange(of: cameraService.capturedImage) { _, newImage in
             guard let image = newImage else { return }
             cameraService.capturedImage = nil
             soundManager.playPrintEject()
-            let location = locationManager.cityName
+            let location = styleSettings.showLocation ? locationManager.cityName : nil
+            let fontStyle = styleSettings.fontStyle
+            let fontColor = styleSettings.fontColor
             Task.detached(priority: .userInitiated) {
                 let cropped = image.squareCropped()
                 await MainActor.run {
-                    printViewModel.eject(image: cropped, location: location)
+                    printViewModel.eject(image: cropped, location: location, fontStyle: fontStyle, fontColor: fontColor)
                 }
             }
         }
@@ -127,14 +135,13 @@ struct CameraBodyView: View {
 
     private func capturePhoto() {
         guard !printViewModel.isAnimating, !filmFull else { return }
+        activeChip = nil
 
-        // Flash
         showFlash = true
         withAnimation(.easeOut(duration: 0.15)) {
             showFlash = false
         }
 
-        // Haptic
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
 

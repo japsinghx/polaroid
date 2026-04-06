@@ -4,12 +4,20 @@ struct PolaroidPrintView: View {
     let image: UIImage
     let date: Date
     var developOpacity: Double = 0.0
-    var location: String? = nil
+    var leftText: String? = nil
+    var fontStyle: FontStyle = .handwritten
+    var fontColor: FontColor = .dark
 
     private var dateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MM/dd/yyyy"
         return formatter.string(from: date)
+    }
+
+    private func resolvedFont(size: CGFloat) -> Font {
+        fontStyle == .handwritten
+            ? .custom("PermanentMarker-Regular", size: size)
+            : .system(size: size - 2, weight: .thin, design: .serif)
     }
 
     var body: some View {
@@ -31,19 +39,20 @@ struct PolaroidPrintView: View {
             .padding(.top, 16)
             .padding(.horizontal, 16)
 
-            // Bottom border — light, personal handwritten feel
+            // Bottom border
             HStack(alignment: .bottom) {
-                if let location {
-                    Text(location)
-                        .font(.custom("PermanentMarker-Regular", size: 15))
-                        .foregroundStyle(Color(white: 0.2).opacity(0.55))
+                if let leftText {
+                    Text(leftText)
+                        .font(resolvedFont(size: 15))
+                        .foregroundStyle(fontColor.swiftUIColor)
+                        .lineLimit(1)
                 }
 
                 Spacer()
 
                 Text(dateString)
-                    .font(.custom("PermanentMarker-Regular", size: 15))
-                    .foregroundStyle(Color(white: 0.2).opacity(0.55))
+                    .font(resolvedFont(size: 15))
+                    .foregroundStyle(fontColor.swiftUIColor)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -60,8 +69,9 @@ struct PolaroidPrintView: View {
     PolaroidPrintView(
         image: UIImage(systemName: "photo.fill")!,
         date: .now,
-        developOpacity: 0.0,
-        location: "New York"
+        leftText: "New York",
+        fontStyle: .handwritten,
+        fontColor: .dark
     )
     .padding()
     .background(Color.gray.opacity(0.3))
