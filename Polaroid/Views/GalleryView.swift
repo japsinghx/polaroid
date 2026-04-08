@@ -8,12 +8,21 @@ struct GalleryView: View {
     private var photos: [PolaroidPhoto]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+
     @State private var showClearAlert = false
+    @State private var showDeleteSelectedAlert = false
+    @State private var isSelecting = false
+    @State private var selectedIDs = Set<UUID>()
+    @State private var shareItems: ShareableImages? = nil
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12),
     ]
+
+    private var selectedPhotos: [PolaroidPhoto] {
+        photos.filter { selectedIDs.contains($0.id) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -25,32 +34,76 @@ struct GalleryView: View {
                         description: Text("Take some photos to see them here")
                     )
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(photos, id: \.id) { photo in
-                                NavigationLink {
-                                    PhotoDetailView(photo: photo, styleSettings: styleSettings)
-                                } label: {
-                                    GalleryThumbnail(photo: photo, styleSettings: styleSettings)
+                    ZStack(alignment: .bottom) {
+                        ScrollView {
+                            LazyVGrid(columns: columns, spacing: 12) {
+                                ForEach(photos, id: \.id) { photo in
+                                    NavigationLink(destination: PhotoDetailView(photo: photo, styleSettings: styleSettings)) {
+                                        GalleryThumbnail(photo: photo, styleSettings: styleSettings)
+                                            .overlay(alignment: .topTrailing) {
+                                                if isSelecting {
+                                                    selectionBadge(selected: selectedIDs.contains(photo.id))
+                                                        .padding(6)
+                                                }
+                                            }
+                                            .opacity(isSelecting && !selectedIDs.isEmpty && !selectedIDs.contains(photo.id) ? 0.6 : 1.0)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(isSelecting)
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        if isSelecting { toggleSelection(photo) }
+                                    })
                                 }
                             }
+                            .padding()
+
+                            if !isSelecting {
+                                Button(role: .destructive) {
+                                    showClearAlert = true
+                                } label: {
+                                    Text("Clear Film Roll")
+                                        .font(.system(size: 15))
+                                        .foregroundStyle(.red)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(Color.red.opacity(0.08))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                                .padding(.horizontal)
+                                .padding(.bottom, 20)
+                            }
+
+                            Color.clear.frame(height: isSelecting ? 80 : 0)
                         }
-                        .padding()
+
+                        // Selection action bar
+                        if isSelecting && !selectedIDs.isEmpty {
+                            selectionActionBar
+                        }
                     }
                 }
             }
-            .navigationTitle("Film Roll (\(photos.count)/8)")
+            .navigationTitle(isSelecting ? "\(selectedIDs.count) Selected" : "Film Roll (\(photos.count)/8)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") { dismiss() }
+                    if isSelecting {
+                        Button("Cancel") { exitSelection() }
+                    } else {
+                        Button("Done") { dismiss() }
+                    }
                 }
-                if !photos.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Clear Film", role: .destructive) {
-                            showClearAlert = true
+                ToolbarItem(placement: .topBarTrailing) {
+                    if isSelecting {
+                        Button(selectedIDs.count == photos.count ? "Deselect All" : "Select All") {
+                            if selectedIDs.count == photos.count {
+                                selectedIDs.removeAll()
+                            } else {
+                                selectedIDs = Set(photos.map(\.id))
+                            }
                         }
-                        .foregroundStyle(.red)
+                    } else if !photos.isEmpty {
+                        Button("Select") { isSelecting = true }
                     }
                 }
             }
@@ -60,7 +113,124 @@ struct GalleryView: View {
             } message: {
                 Text("Make sure you've saved your photos to your camera roll first. This cannot be undone.")
             }
+            .alert("Delete \(selectedIDs.count) photo\(selectedIDs.count == 1 ? "" : "s")?", isPresented: $showDeleteSelectedAlert) {
+                Button("Delete", role: .destructive) { deleteSelected() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This cannot be undone.")
+            }
+            .sheet(item: $shareItems) { shareable in
+                ShareSheet(items: shareable.images)
+            }
         }
+    }
+
+    private var selectionActionBar: some View {
+        HStack(spacing: 0) {
+            // Share
+            Button {
+                exportSelected()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 20))
+                    Text("Share")
+                        .font(.system(size: 11))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .disabled(selectedIDs.isEmpty)
+
+            Divider().frame(height: 40)
+
+            // Delete
+            Button {
+                showDeleteSelectedAlert = true
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 20))
+                    Text("Delete")
+                        .font(.system(size: 11))
+                }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(.red)
+            }
+            .disabled(selectedIDs.isEmpty)
+        }
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .overlay(Divider(), alignment: .top)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.easeInOut(duration: 0.2), value: selectedIDs.isEmpty)
+    }
+
+    @ViewBuilder
+    private func selectionBadge(selected: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(selected ? Color.blue : Color.white.opacity(0.85))
+                .frame(width: 24, height: 24)
+                .overlay(Circle().stroke(selected ? Color.blue : Color(white: 0.6), lineWidth: 1.5))
+            if selected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
+    private func toggleSelection(_ photo: PolaroidPhoto) {
+        if selectedIDs.contains(photo.id) {
+            selectedIDs.remove(photo.id)
+        } else {
+            selectedIDs.insert(photo.id)
+        }
+    }
+
+    private func exitSelection() {
+        isSelecting = false
+        selectedIDs.removeAll()
+    }
+
+    private func exportSelected() {
+        // Extract all values from MainActor-bound objects before the detached task
+        let showLocation = styleSettings.showLocation
+        let fontStyle = styleSettings.fontStyle
+        let fontColor = styleSettings.fontColor
+        let exportData: [(path: String, date: Date, leftText: String?)] = selectedPhotos.map { photo in
+            let leftText: String? = {
+                if let msg = photo.customMessage, !msg.isEmpty { return msg }
+                return showLocation ? photo.location : nil
+            }()
+            return (path: photo.imagePath, date: photo.captureDate, leftText: leftText)
+        }
+        Task.detached(priority: .userInitiated) {
+            var items: [UIImage] = []
+            for entry in exportData {
+                guard let img = PhotoStorageManager.shared.loadPhoto(path: entry.path)?.squareCropped() else { continue }
+                let framed = PolaroidFrameRenderer.render(
+                    image: img,
+                    date: entry.date,
+                    leftText: entry.leftText,
+                    fontStyle: fontStyle,
+                    fontColor: fontColor
+                )
+                items.append(framed)
+            }
+            guard !items.isEmpty else { return }
+            await MainActor.run {
+                shareItems = ShareableImages(images: items)
+            }
+        }
+    }
+
+    private func deleteSelected() {
+        for photo in selectedPhotos {
+            PhotoStorageManager.shared.deletePhoto(path: photo.imagePath)
+            modelContext.delete(photo)
+        }
+        exitSelection()
     }
 
     private func clearAllPhotos() {
@@ -169,7 +339,6 @@ struct PhotoDetailView: View {
                         fontColor: styleSettings.fontColor
                     )
 
-                    // Tap zone over the left text area to edit custom message
                     if !isEditingMessage {
                         Color.clear
                             .frame(width: 160, height: 48)
@@ -199,7 +368,6 @@ struct PhotoDetailView: View {
                     .padding(.top, 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
-                    // Hint to tap
                     let hint = (photo.customMessage == nil || photo.customMessage!.isEmpty)
                         ? "Tap left corner to add a message"
                         : nil
@@ -263,6 +431,11 @@ struct PhotoDetailView: View {
         photo.customMessage = messageInput.isEmpty ? nil : messageInput
         isEditingMessage = false
     }
+}
+
+struct ShareableImages: Identifiable {
+    let id = UUID()
+    let images: [UIImage]
 }
 
 struct ShareSheet: UIViewControllerRepresentable {

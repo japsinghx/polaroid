@@ -31,7 +31,7 @@ struct CameraChipsView: View {
 
                 // Location toggle chip
                 ChipButton(
-                    label: settings.showLocation ? "loc on" : "loc off",
+                    label: settings.showLocation ? "Location on" : "Location off",
                     isActive: false,
                     dimmed: !settings.showLocation
                 ) {
